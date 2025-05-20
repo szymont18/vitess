@@ -25,13 +25,13 @@ minikube start
 kubectl create namespace suuexample
 kubectl apply -f vitess_config/operator.yaml
 kubectl apply -f vitess_config/initial_cluster.yaml
-kubectl port-forward -n suuexample --address localhost \
+kubectl port-forward -n suuexample --address 127.0.0.1 \
 "$(kubectl get service -n suuexample --selector="planetscale.com/component=vtctld" -o name | head -n1)" 15000 15999 &
 
-kubectl port-forward -n suuexample --address localhost \
-"$(kubectl get service -n suuexample --selector="planetscale.com/component=vtgate,!planetscale.com/cell" -o name | head -n1)" 15306:3306 &
+kubectl port-forward -n suuexample --address 127.0.0.1 \
+"$(kubectl get service -n suuexample --selector='planetscale.com/component=vtgate,!planetscale.com/cell' -o name | head -n1)" 15306:3306 &
 
-kubectl port-forward -n suuexample --address localhost \
+kubectl port-forward -n suuexample --address 127.0.0.1 \
 "$(kubectl get service -n suuexample --selector="planetscale.com/component=vtadmin" -o name | head -n1)" 14000:15000 14001:15001 &
 kubectl apply -f vitess_config/vertical_sharding/vertical_sharding.yaml
 ./vitess_config/vertical_sharding/vertical_sharding.sh
