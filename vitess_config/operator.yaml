@@ -490,7 +490,7 @@ spec:
                           type: string
                         type: object
                       keyspace:
-                        example: commerce
+                        example: pokemondB
                         type: string
                       name:
                         type: string
@@ -2120,7 +2120,7 @@ spec:
                                     type: string
                                   type: object
                                 keyspace:
-                                  example: commerce
+                                  example: pokemondB
                                   type: string
                                 name:
                                   type: string
