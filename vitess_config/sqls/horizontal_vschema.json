@@ -1,7 +1,0 @@
-{
-    "tables": {
-        "pokemon_seq": {
-            "type": "sequence"
-        }
-    }
-}
