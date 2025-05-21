@@ -1,0 +1,22 @@
+{
+    "sharded": true,
+    "vindexes": {
+        "xxhash": {
+            "type": "xxhash"
+        }
+    },
+    "tables": {
+        "pokemon": {
+            "column_vindexes": [
+                {
+                    "column": "pokemon_id",
+                    "name": "xxhash"
+                }
+            ],
+            "auto_increment": {
+                "column": "pokemon_id",
+                "sequence": "pokemon_seq"
+            }
+        }
+    }
+}

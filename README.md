@@ -60,3 +60,10 @@ kubectl apply -f vitess_config/vertical_sharding/vertical_sharding.yaml
 vtctldclient MoveTables --workflow trainersAlone --target-keyspace trainers complete
 ```
 
+### 6. Horizontal sharding
+```bash
+./vitess_config/horizontal_sharding/horizontal_sharding.sh
+kubectl apply -f vitess_config/horizontal_sharding/horizontal_sharding.yaml
+vtctldclient Reshard --workflow poke2poke --target-keyspace pokemondB create --source-shards '-' --target-shards '-80,80-'
+```
+
