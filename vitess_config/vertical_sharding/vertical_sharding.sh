@@ -1,1 +1,0 @@
-vtctldclient MoveTables --workflow trainersAlone --target-keyspace trainers create --source-keyspace pokemondB --tables "trainersdB"

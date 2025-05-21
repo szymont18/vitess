@@ -1,1 +1,0 @@
-alter table pokemon change pokemon_id pokemon_id bigint not null;
