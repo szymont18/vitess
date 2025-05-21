@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-all-in-one
+  namespace: observability # Wdrażamy w namespace 'observability'
+  labels:
+    app: jaeger
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: all-in-one
+spec:
+  type: ClusterIP # Lub NodePort/LoadBalancer jeśli potrzebujesz dostępu z zewnątrz do UI
+  ports:
+    - name: agent-compact-thrift # Port dla agenta Jaegera (UDP)
+      port: 6831
+      protocol: UDP
+      targetPort: 6831
+    - name: agent-binary-thrift # Inny port agenta (UDP)
+      port: 6832
+      protocol: UDP
+      targetPort: 6832
+    # Możesz dodać inne porty, np. dla kolektora, jeśli są potrzebne
+    # - name: collector-grpc
+    #   port: 14250
+    #   targetPort: 14250
+    # - name: collector-http
+    #   port: 14268
+    #   targetPort: 14268
+    - name: query-http # Port dla interfejsu użytkownika Jaegera
+      port: 16686
+      targetPort: 16686
+    - name: otlp-grpc
+      port: 4317 # Standardowy port OTLP gRPC
+      protocol: TCP
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318 # Standardowy port OTLP HTTP
+      protocol: TCP
+      targetPort: 4318
+  selector:
+    app: jaeger
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: all-in-one
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger-all-in-one
+  namespace: observability # Wdrażamy w namespace 'observability'
+  labels:
+    app: jaeger
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: all-in-one
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+      app.kubernetes.io/name: jaeger
+      app.kubernetes.io/component: all-in-one
+  template:
+    metadata:
+      labels:
+        app: jaeger
+        app.kubernetes.io/name: jaeger
+        app.kubernetes.io/component: all-in-one
+    spec:
+      containers:
+      - name: jaeger
+        # Użyj aktualnej wersji obrazu Jaeger All-in-One
+        image: jaegertracing/all-in-one:1.20
+        ports:
+        - containerPort: 6831
+          protocol: UDP
+          name: agent-compact
+        - containerPort: 6832
+          protocol: UDP
+          name: agent-binary
+        - containerPort: 14250 # Collector gRPC
+        - containerPort: 14268 # Collector HTTP
+        - containerPort: 16686 # Jaeger UI
+        env:
+          - name: COLLECTOR_ZIPKIN_HOST_PORT # Jeśli chcesz też odbierać format Zipkin
+            value: ":9411"
+          - name: SPAN_STORAGE_TYPE # Domyślnie 'memory', można zmienić na 'elasticsearch', 'cassandra' dla produkcji
+            value: "memory"
+        readinessProbe:
+          httpGet:
+            path: "/" # UI Jaegera powinno odpowiedzieć
+            port: 16686
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: "/"
+            port: 16686
+          initialDelaySeconds: 15
+          periodSeconds: 20
