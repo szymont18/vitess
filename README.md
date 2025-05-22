@@ -1,6 +1,6 @@
 # Demo shardingu w Vitess z OTel
 
-To repozytorium demonstruje, jak skonfigurować środowisko Vitess przy użyciu AWS do zarządzania bazą danych z wykorzystaniem shardingu wertykalnego i horyzontalnego.
+Repozytorium demonstruje, jak skonfigurować środowisko Vitess przy użyciu AWS do zarządzania bazą danych z wykorzystaniem shardingu wertykalnego i horyzontalnego.
 
 ---
 
