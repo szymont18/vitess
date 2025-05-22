@@ -1,69 +1,100 @@
-# Pokémon Vitess Setup
+# Demo shardingu w Vitess z OTel
 
-This repository demonstrates how to set up a Vitess environment using Minikube for managing a Pokémon and Trainer database with vertical sharding.
+To repozytorium demonstruje, jak skonfigurować środowisko Vitess przy użyciu AWS do zarządzania bazą danych z wykorzystaniem shardingu wertykalnego i horyzontalnego.
 
 ---
 
-## 🧱 Prerequisites
+## 🧱 Wymagania wstępne
 
-Make sure you have the following installed:
+Upewnij się, że masz zainstalowane następujące narzędzia:
 
-- [Minikube](https://minikube.sigs.k8s.io/docs/start/)
+
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [mysql](https://dev.mysql.com/doc/mysql-getting-started/en/)
-- `vtctldclient` installed and available in your PATH
+- [`vtctldclient`] installed and available in your PATH
 
 ---
 
-## ⚙️ Setup Instructions
+# Jak odtworzyć projekt - krok po kroku
 
-Follow these steps to bring up the Vitess cluster and apply vertical sharding:
+Sekcja ta ma za zadanie umożliwić innej osobie dokładne odtworzenie środowiska od zera, w tym instalacji narzędzi i ich konfiguracji. Przedstawia pełny „przepis” krok po kroku.
 
-### 1. Setup environment and cluster
+## Konfiguracja środowiska AWS
+
+- **Krok 1** – Zaloguj się do środowiska AWS oraz przejdź do zakładki AWS Cloud Formation  
+  ![Krok 1](img/1.png)
+
+- **Krok 2** – Utwórz nowy stack przy użyciu nowych zasobów klikając poniższy przycisk  
+  ![Krok 2](img/2.png)
+
+- **Krok 3** – Dodaj plik `cloud_formation.yaml` z folderu `vitess/cloud_formation` jako templatkę opisującą infrastrukturę potrzebną do uruchomienia dema  
+  ![Krok 3](img/3.png)
+
+- **Krok 4** – Skonfiguruj pozostałe pola w następujący sposób  
+  ![Krok 4a](img/4.png)  
+  ![Krok 4b](img/5.png)
+
+- **Krok 5** – Konfiguracja narzędzia kubectl:
+
 ```bash
-minikube start
-kubectl create namespace suuexample
-kubectl apply -f vitess_config/operator.yaml
-kubectl apply -f vitess_config/initial_cluster.yaml
+aws eks --region us-east-1 update-kubeconfig --name suu-vitess-cluster
 ```
 
-### 2. Port forwarding
+## Konfiguracja narzędzia Jaeger
 ```bash
-kubectl port-forward -n suuexample --address 127.0.0.1 \
-"$(kubectl get service -n suuexample --selector="planetscale.com/component=vtctld" -o name | head -n1)" 15000 15999
-
-kubectl port-forward -n suuexample --address 127.0.0.1 \
-"$(kubectl get service -n suuexample --selector='planetscale.com/component=vtgate,!planetscale.com/cell' -o name | head -n1)" 15306:3306
-
-kubectl port-forward -n suuexample --address 127.0.0.1 \
-"$(kubectl get service -n suuexample --selector="planetscale.com/component=vtadmin" -o name | head -n1)" 14000:15000 14001:15001
+kubectl apply -f vitess/vitess_config/yaml/jaeger.yaml
 ```
 
-### 3. Alias SQL and vtctldclient
+## Konfiguracja narzędzia Vitess
+- **Krok 1** - Utworzenie namespace example
 ```bash
-alias mysql="mysql -h 127.0.0.1 -P 15306 -u user"
-alias vtctldclient="vtctldclient --server localhost:15999 --alsologtostderr"
+kubectl create namespace example
+```
+- **Krok 2** - Utworzenie Operatora
+```bash    
+kubectl apply -f vitess/vitess_config/yaml/operator.yaml
+```
+- **Krok 3** - Utworzenie początkowego clustra
+```bash
+kubectl apply -f vitess/vitess_config/yaml/101_intial_cluster.yaml
+```
+- **Krok 4** - Uruchomienie skryptu do port-forwardingu (w osobnym terminalu)
+```bash
+source vitess/vitess_config/pf.sh
+```
+- **Krok 5**- utworzenie schematu bazy danych i dodanie przykładowych danych
+```bash
+vtctldclient ApplySchema --sql="$(cat vitess_config/sql/create_commerce_schema.sql)" commerce
+vtctldclient ApplyVSchema --vschema="$(cat vitess_config/json/vschema_commerce_initial.json)" commerce    
+mysql < vitess_config/sql/insert_commerce_data.sql
+```
+- **Krok 6** - Dodanie shardingu wertykalnego
+```bash
+kubectl apply -f vitess_config/yaml/201_customer_tablets.yaml
+vtctldclient MoveTables --workflow commerce2customer --target-keyspace customer create --source-keyspace commerce --tables "customer,corder"
+vtctldclient vdiff --workflow commerce2customer --target-keyspace customer create
+vtctldclient vdiff --workflow commerce2customer --target-keyspace customer show last
+vtctldclient MoveTables --workflow commerce2customer --target-keyspace customer switchtraffic --tablet-types "rdonly,replica"
+vtctldclient MoveTables --workflow commerce2customer --target-keyspace customer switchtraffic --tablet-types primary
+vtctldclient MoveTables --workflow commerce2customer --target-keyspace customer complete
 ```
 
-### 4. Create database and put initial data
+- **Krok 7** - Dodanie shardingu horyzontalnego
 ```bash
-vtctldclient ApplySchema --sql="$(cat vitess_config/sqls/initial_database.sql)" pokemondB
-vtctldclient ApplyVSchema --vschema="$(cat vitess_config/sqls/initial_vschema.json)" pokemondB
+vtctldclient ApplySchema --sql="$(cat vitess_config/sql/create_commerce_seq.sql)" commerce
+vtctldclient ApplyVSchema --vschema="$(cat vitess_config/json/vschema_commerce_seq.json)" commerce
+vtctldclient ApplySchema --sql="$(cat vitess_config/sql/create_customer_sharded.sql)" customer
+vtctldclient ApplyVSchema --vschema="$(cat vitess_config/json/vschema_customer_sharded.json)" customer
+kubectl apply -f vitess_config/yaml/302_new_shards.yaml
 
-mysql < vitess_config/sqls/initial_data.sql
-```
+vtctldclient Reshard --workflow cust2cust --target-keyspace customer create --source-shards '-' --target-shards '-80,80-'
 
-### 5. Vertical sharding
-```bash
-kubectl apply -f vitess_config/vertical_sharding/vertical_sharding.yaml
-./vitess_config/vertical_sharding/vertical_sharding.sh
-vtctldclient MoveTables --workflow trainersAlone --target-keyspace trainers complete
-```
+vtctldclient vdiff --workflow cust2cust --target-keyspace customer create
+vtctldclient vdiff --workflow cust2cust --target-keyspace customer show last
 
-### 6. Horizontal sharding
-```bash
-./vitess_config/horizontal_sharding/horizontal_sharding.sh
-kubectl apply -f vitess_config/horizontal_sharding/horizontal_sharding.yaml
-vtctldclient Reshard --workflow poke2poke --target-keyspace pokemondB create --source-shards '-' --target-shards '-80,80-'
+vtctldclient Reshard --workflow cust2cust --target-keyspace customer switchtraffic --tablet-types "rdonly,replica"
+vtctldclient Reshard --workflow cust2cust --target-keyspace customer switchtraffic --tablet-types primary
+
+vtctldclient Reshard --workflow cust2cust --target-keyspace customer complete
 ```
 
