@@ -45,6 +45,21 @@ aws eks --region us-east-1 update-kubeconfig --name suu-vitess-cluster
 kubectl apply -f vitess/vitess_config/yaml/jaeger.yaml
 ```
 
+## Konfiguracja narzędzia Grafana
+```bash
+kubectl apply -f vitess/vitess_config/yaml/grafana.yaml
+```
+
+## Port-forwarding
+W nowym terminalu:
+```bash
+kubectl port-forward service/jaeger-all-in-one 16686:16686 -n observability
+```
+W nowym terminalu
+```bash
+kubectl port-forward -n observability service/grafana 3000:3000
+```
+
 ## Konfiguracja narzędzia Vitess
 - **Krok 1** - Utworzenie namespace example
 ```bash
