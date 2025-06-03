@@ -1,0 +1,42 @@
+# otel-collector-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: telemetry # Możesz zmienić na swoją przestrzeń nazw
+  labels:
+    app: opentelemetry
+    component: otel-collector
+spec:
+  selector:
+    app: opentelemetry
+    component: otel-collector-agent # Musi pasować do etykiet podów Deploymentu
+  ports:
+    - name: otlp-grpc
+      protocol: TCP
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      protocol: TCP
+      port: 4318
+      targetPort: 4318
+    - name: prom-metrics
+      port: 8889 # Port, na którym serwis będzie nasłuchiwał
+      targetPort: 8889 # Port kontenera OTel, gdzie działa eksporter Prometheus
+    - name: coll-metrics
+      port: 8888 # Port serwisu dla metryk wewnętrznych
+      targetPort: 8888 # Port kontenera OTel dla metryk wewnętrznych
+    # Dodaj inne porty, jeśli są potrzebne, np.:
+    # - name: jaeger-grpc
+    #   protocol: TCP
+    #   port: 14250
+    #   targetPort: 14250
+    # - name: jaeger-thrift
+    #   protocol: TCP
+    #   port: 14268
+    #   targetPort: 14268
+    # - name: zipkin
+    #   protocol: TCP
+    #   port: 9411
+    #   targetPort: 9411
+  type: ClusterIP # Dostępny tylko wewnątrz klastra. Zmień na LoadBalancer/NodePort jeśli potrzebujesz dostępu z zewnątrz.

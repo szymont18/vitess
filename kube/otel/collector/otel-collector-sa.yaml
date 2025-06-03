@@ -1,0 +1,9 @@
+# otel-collector-sa.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-collector-sa # Nazwa ServiceAccount, której szuka Twój DaemonSet
+  namespace: telemetry     # Przestrzeń nazw, w której działa DaemonSet
+  labels:
+    app: opentelemetry
+    component: otel-collector-agent

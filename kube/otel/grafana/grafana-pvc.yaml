@@ -1,0 +1,15 @@
+# grafana-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+  namespace: telemetry # Możesz zmienić na swoją przestrzeń nazw
+  labels:
+    app: grafana
+spec:
+  accessModes:
+    - ReadWriteOnce # Zazwyczaj wystarczające dla pojedynczej instancji Grafany
+  resources:
+    requests:
+      storage: 5Gi # Dostosuj rozmiar do swoich potrzeb
+  # storageClassName: "your-storage-class" # Opcjonalnie: określ klasę pamięci, jeśli masz specyficzną

@@ -1,0 +1,72 @@
+# prometheus-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: telemetry
+  labels:
+    app: prometheus
+    component: server
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 30s
+      evaluation_interval: 30s
+
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      - job_name: 'otel-collector-app-metrics'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - telemetry
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: otel-collector
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: prom-metrics # Port 8889 w serwisie OTel Collector
+
+      - job_name: 'otel-collector-internal-metrics'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - telemetry
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: otel-collector
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: coll-metrics # Port 8888 w serwisie OTel Collector
+
+      - job_name: 'kube-state-metrics' # <--- NOWE ZADANIE DLA KUBE-STATE-METRICS
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+          - role: endpoints # Lub 'service' jeśli wolisz skrobać serwis bezpośrednio
+            namespaces:
+              names:
+                # Zmień na przestrzeń nazw, w której wdrożyłeś kube-state-metrics
+                # Może to być 'kube-system' lub 'telemetry'
+                - telemetry
+        relabel_configs:
+          # Wybierz tylko serwis lub pody kube-state-metrics
+          # Domyślna nazwa serwisu/podów to często 'kube-state-metrics'
+          - source_labels: [__meta_kubernetes_service_name] # Jeśli role: service
+            action: keep
+            regex: kube-state-metrics
+          # Lub dla podów:
+          # - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+          #   action: keep
+          #   regex: kube-state-metrics
+          # Wybierz odpowiedni port (kube-state-metrics domyślnie udostępnia metryki na porcie 8080)
+          - source_labels: [__meta_kubernetes_endpoint_port_name] # Jeśli role: endpoints
+            action: keep
+            # Nazwa portu w serwisie KSM, często 'http-metrics' lub 'metrics'
+            regex: http-metrics # Sprawdź rzeczywistą nazwę portu w serwisie KSM

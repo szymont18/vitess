@@ -1,0 +1,66 @@
+# grafana-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: telemetry # Możesz zmienić na swoją przestrzeń nazw
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      # Opcjonalnie: Ustawienia kontekstu bezpieczeństwa
+      # securityContext:
+      #   fsGroup: 472
+      #   runAsUser: 472
+      #   runAsGroup: 472
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest # Możesz przypiąć konkretną wersję, np. grafana/grafana:10.4.2
+        ports:
+        - name: grafana-http
+          containerPort: 3000 # Domyślny port Grafany
+          protocol: TCP
+        env:
+          # Domyślny użytkownik to 'admin', hasło 'admin'. Zostaniesz poproszony o zmianę przy pierwszym logowaniu.
+          # Możesz ustawić inne dane logowania przez zmienne środowiskowe, np.:
+          # - name: GF_SECURITY_ADMIN_USER
+          #   value: "twoj_admin"
+          # - name: GF_SECURITY_ADMIN_PASSWORD
+          #   value: "twoje_super_tajne_haslo"
+          - name: GF_PATHS_DATA # Ścieżka do danych Grafany w kontenerze
+            value: /var/lib/grafana
+          - name: GF_PATHS_LOGS # Ścieżka do logów Grafany w kontenerze
+            value: /var/log/grafana
+          # - name: GF_SERVER_ROOT_URL # Jeśli Grafana będzie dostępna pod konkretnym URL z subścieżką
+          #   value: "http://twoja-domena.com/grafana"
+        readinessProbe:
+          httpGet:
+            path: /api/health # Endpoint sprawdzania gotowości Grafany
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        volumeMounts:
+        - name: grafana-storage # Montowanie wolumenu dla danych Grafany
+          mountPath: /var/lib/grafana # Domyślna ścieżka danych Grafany
+      volumes:
+      - name: grafana-storage
+        persistentVolumeClaim:
+          claimName: grafana-pvc # Nazwa PVC zdefiniowanego wcześniej
+      # Jeśli NIE używasz PVC (dane będą nietrwałe):
+      # volumes:
+      # - name: grafana-storage
+      #   emptyDir: {} # Dane zostaną utracone po restarcie poda

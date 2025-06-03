@@ -1,0 +1,52 @@
+# otel-collector-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-collector-agent-role # Możesz wybrać inną nazwę dla ClusterRole
+  labels:
+    app: opentelemetry
+    component: otel-collector-agent
+rules:
+- apiGroups: [""] # Core API group
+  resources:
+  - nodes
+  - nodes/proxy # Potrzebne dla niektórych scraperów hostmetrics, które mogą chcieć odpytać kubelet
+  - nodes/metrics # Potrzebne dla niektórych scraperów hostmetrics (np. kubeletstats)
+  - nodes/stats   # Potrzebne dla niektórych scraperów hostmetrics
+  - namespaces
+  - pods
+  - services      # Opcjonalnie, jeśli k8sattributes ma wzbogacać o dane serwisów
+  - configmaps    # Opcjonalnie, jeśli kolektor ma dynamicznie odczytywać ConfigMapy
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources:
+  - replicasets # Opcjonalnie, dla wzbogacania o dane ReplicaSet
+  - daemonsets  # Opcjonalnie, dla wzbogacania o dane DaemonSet
+  - deployments # Opcjonalnie, dla wzbogacania o dane Deployment
+  - statefulsets # Opcjonalnie, dla wzbogacania o dane StatefulSet
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["discovery.k8s.io"] # Potrzebne dla niektórych mechanizmów service discovery
+  resources:
+  - endpointslices
+  verbs: ["get", "list", "watch"]
+# Jeśli używasz procesora k8sattributes do zbierania eventów:
+# - apiGroups: [""]
+#   resources: ["events"]
+#   verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector-agent-binding # Możesz wybrać inną nazwę dla ClusterRoleBinding
+  labels:
+    app: opentelemetry
+    component: otel-collector-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-collector-agent-role # Nazwa ClusterRole zdefiniowanej powyżej
+subjects:
+- kind: ServiceAccount
+  name: otel-collector-sa # Nazwa ServiceAccount
+  namespace: telemetry     # Przestrzeń nazw ServiceAccount

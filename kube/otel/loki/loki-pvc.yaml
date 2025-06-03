@@ -1,0 +1,15 @@
+# loki-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loki-pvc
+  namespace: telemetry
+  labels:
+    app: loki
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi # Dostosuj rozmiar
+  # storageClassName: "your-storage-class" # Opcjonalnie

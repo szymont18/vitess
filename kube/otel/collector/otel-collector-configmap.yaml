@@ -1,0 +1,70 @@
+# otel-collector-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-conf
+  namespace: telemetry
+  labels:
+    app: opentelemetry
+    component: otel-collector-conf
+data:
+  collector.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4317"
+          http:
+            endpoint: "0.0.0.0:4318"
+
+      hostmetrics:
+        collection_interval: 30s
+        scrapers:
+          cpu:
+          disk:
+          load:
+          filesystem:
+          memory:
+          network:
+
+      prometheus/cadvisor: # NOWY ODBIORNIK DLA METRYK cAdvisor z Kubeleta
+        config:
+          scrape_configs:
+            - job_name: 'kubernetes-cadvisor'
+              scrape_interval: 30s
+              # Konfiguracja dla połączenia HTTPS z Kubeletem (port 10250)
+              # Wymaga, aby ServiceAccount kolektora (`otel-collector-sa`) miał uprawnienia do `nodes/proxy` lub `nodes/metrics`
+              # (Twój plik otel-collector-rbac.yaml powinien to zapewniać)
+              kubernetes_sd_configs:
+                - role: node
+              relabel_configs:
+                # Wybierz tylko bieżący węzeł, na którym działa ten pod DaemonSet
+                - source_labels: [__meta_kubernetes_node_name]
+                  action: keep
+                  regex: ${KUBE_NODE_NAME} # Używa zmiennej środowiskowej KUBE_NODE_NAME
+                # Ustaw adres skrobania na adres węzła i port Kubeleta
+                - action: replace
+                  source_labels: [__meta_kubernetes_node_address_InternalIP] # Preferowany adres wewnętrzny węzła
+                  regex: (.*)
+                  target_label: __address__
+                  replacement: ${1}:10250 # Port HTTPS Kubeleta
+                - action: replace
+                  target_label: __scheme__
+                  replacement: https # Użyj HTTPS
+                - action: replace
+                  target_label: __metrics_path__
+                  replacement: /metrics/cadvisor # Standardowy endpoint cAdvisor w Kubelet
+              # Konfiguracja TLS
+              tls_config:
+                ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                # Dla Minikube lub środowisk testowych z niestandardowymi certyfikatami Kubeleta,
+                # możesz potrzebować ustawić insecure_skip_verify na true.
+                # W produkcji ZAWSZE powinno być false.
+                insecure_skip_verify: false # Zmień na true tylko jeśli masz problemy z certyfikatem CA Kubeleta w Minikube
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 75
+        spike_limit_percentage: 15
