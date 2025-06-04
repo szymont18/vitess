@@ -163,3 +163,32 @@ Poniżej prezentujemy wykresy i dane zebrane z monitoringu, które ilustrują r�
 ![Alternatiwny](img/withStress.png)
 
 
+### 9. Wykorzystanie narzędzi AI
+
+W trakcie tworzenia projektu zasięgaliśmy pomocy narzędzi takich jak ChatGPT czy DeepSeek zarówno w celu znalezienia poprawnych komend tworzących kolejne komponenty systemu jak i dla celów przyśpieszenia pracy przez generowanie mock'ów/prostych komend.
+
+Modele sztucznej inteligencji dodają dodatkowo bardzo dokłądne wytłumaczenie kolejnych kroków, na przykład w tych przypadku:
+
+![Alternatiwny](img/chat4.png)
+
+dlatego zrzuty ekranu obrazujące wykorzystanie modeli są docięte do pytań/odpowiedzi.
+
+Przedstawione narzędzia często miały rację, szczególnie w przypadku najczęściej uzywanych rozwiązań jak kubernetes czy mysql - często konieczne było doprecyzowanie dodatkowych parametrów, lecz komendy zwracane przez program były prawidłowe:
+
+![Alternatiwny](img/chat1.png)
+![Alternatiwny](img/chat2.png)
+![Alternatiwny](img/chat3.png)
+
+Równiez w przypadku samego Vitessa, chatGPT zdarzał się być przydatny:
+
+![Alternatiwny](img/chat5.png)
+
+, lecz jego przydatność zaczynała się dopiero w momencie kiedy zadało się właściwe pytanie, np. "Jak postawić Vitessa z yamla". Proste pytanie "Jak uruchomić Vitessa" prowadziło do błędnych informacji:
+
+![Alternatiwny](img/chat6.png)
+
+, poniewaz Vitess nie jest juz wspierany przez helma. Oczywiście w momencie zwrócenia na to uwagi, informacja staje się dla niego oczywista:
+
+![Alternatiwny](img/chat7.png)
+
+Tak więc podsumowując wykorzystanie narzędzi AI, są to bardzo wygodne rozwiązania, jednak dopiero wtedy, kiedy jest się obeznanym w temacie i intuicyjnie wie się, kiedy odpowiedzi mają szansę być poprawne, a kiedy nie. Dopóki nie jest się dobrze zaznajomionym z technologią, najlepszym wyborem jest skorzystanie z docsów.
