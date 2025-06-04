@@ -192,3 +192,7 @@ Równiez w przypadku samego Vitessa, chatGPT zdarzał się być przydatny:
 ![Alternatiwny](img/chat7.png)
 
 Tak więc podsumowując wykorzystanie narzędzi AI, są to bardzo wygodne rozwiązania, jednak dopiero wtedy, kiedy jest się obeznanym w temacie i intuicyjnie wie się, kiedy odpowiedzi mają szansę być poprawne, a kiedy nie. Dopóki nie jest się dobrze zaznajomionym z technologią, najlepszym wyborem jest skorzystanie z docsów.
+
+### 10. Bibliografia
+- Docsy Vitess: https://vitess.io/docs
+- Docsy OpenTelemetry: https://opentelemetry.io/docs
