@@ -142,9 +142,9 @@ W naszym eksperymencie zebraliśmy dane dla dwóch różnych scenariuszy:
 
 Poniżej prezentujemy wykresy i dane zebrane z monitoringu, które ilustrują różnice w zużyciu CPU między tymi dwoma stanami, co pozwala na lepsze zrozumienie wpływu obciążenia na zasoby systemowe.
 
-[Alternatiwny](img/metric.png)
-[Alternatiwny](img/withoutStress.png)
-[Alternatiwny](img/withStress.png)
+![Alternatiwny](img/metric.png)
+![Alternatiwny](img/withoutStress.png)
+![Alternatiwny](img/withStress.png)
 
 
 
