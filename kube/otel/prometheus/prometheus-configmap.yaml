@@ -70,3 +70,35 @@ data:
             action: keep
             # Nazwa portu w serwisie KSM, często 'http-metrics' lub 'metrics'
             regex: http-metrics # Sprawdź rzeczywistą nazwę portu w serwisie KSM
+      - job_name: 'kubernetes-kubelet-cadvisor'
+        # Kubelet udostępnia metryki cAdvisor na porcie 10250 (HTTPS)
+        scrape_interval: 5s
+        scheme: https
+        # Konfiguracja TLS do połączenia z API Kubeleta
+        tls_config:
+          # Używamy CA Kubernetes do weryfikacji certyfikatu Kubeleta
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          # Dla Minikube, jeśli są problemy z weryfikacją certyfikatu Kubeleta,
+          # możesz potrzebować tymczasowo ustawić insecure_skip_verify: true.
+          # W produkcji zawsze powinno być false.
+          insecure_skip_verify: false # Zmień na true tylko jeśli testujesz na Minikube i masz błędy TLS
+        # Używamy tokena ServiceAccount Prometheusa do autoryzacji
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        
+        kubernetes_sd_configs:
+          - role: node # Odkryj wszystkie węzły w klastrze
+        
+        relabel_configs:
+          # Domyślne etykiety dla celów (możesz je dostosować)
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          # Ustaw adres celu na adres IP węzła i port Kubeleta
+          - target_label: __address__
+            replacement: kubernetes.default.svc # Adres API servera
+          # Skonstruuj ścieżkę do metryk cAdvisor przez proxy API servera
+          # To jest ta sama metoda, którą próbowaliśmy w OTel Collectorze,
+          # ale tym razem robi to sam Prometheus.
+          - source_labels: [__meta_kubernetes_node_name]
+            regex: (.+)
+            target_label: __metrics_path__
+            replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
