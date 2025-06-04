@@ -1,0 +1,20 @@
+# loki-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: telemetry
+  labels:
+    app: loki
+spec:
+  ports:
+  - name: http-metrics
+    port: 3100 # Port, na którym serwis Loki będzie nasłuchiwał
+    targetPort: http-metrics
+    protocol: TCP
+  - name: grpc # Port GRPC może być potrzebny dla niektórych konfiguracji
+    port: 9096
+    targetPort: grpc
+  selector:
+    app: loki
+  type: ClusterIP

@@ -1,0 +1,19 @@
+# prometheus-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: telemetry
+  labels:
+    app: prometheus
+    component: server
+spec:
+  ports:
+  - name: http
+    port: 9090
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: prometheus
+    component: server
+  type: ClusterIP # Lub NodePort/LoadBalancer jeśli potrzebujesz dostępu z zewnątrz

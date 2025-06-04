@@ -1,0 +1,111 @@
+# otel-collector-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-conf
+  namespace: telemetry
+  labels:
+    app: opentelemetry
+    component: otel-collector-conf
+data:
+  collector.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4317"
+          http:
+            endpoint: "0.0.0.0:4318"
+
+      hostmetrics:
+        collection_interval: 30s
+        scrapers:
+          cpu:
+          disk:
+          load:
+          filesystem:
+          memory:
+          network:
+
+      prometheus/cadvisor: # Odbiornik dla metryk cAdvisor z Kubeleta
+        config:
+          scrape_configs:
+            - job_name: 'kubernetes-cadvisor'
+              scrape_interval: 30s
+              kubernetes_sd_configs:
+                - role: node
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_node_name]
+                  action: keep
+                  regex: ${KUBE_NODE_NAME}
+                - action: replace
+                  source_labels: [__meta_kubernetes_node_address_InternalIP]
+                  regex: (.*)
+                  target_label: __address__
+                  replacement: ${1}:10250 # Port HTTPS Kubeleta
+                - action: replace
+                  target_label: __scheme__
+                  replacement: https
+                - action: replace
+                  target_label: __metrics_path__
+                  replacement: /metrics/cadvisor
+              tls_config:
+                ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                insecure_skip_verify: false # Dla Minikube/testów może być 'true', w produkcji ZAWSZE 'false'
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 75
+        spike_limit_percentage: 15
+      batch:
+        send_batch_size: 8192
+        timeout: 1s
+      k8sattributes:
+        auth_type: "serviceAccount"
+        passthrough: false
+        filter:
+          node_from_env_var: KUBE_NODE_NAME
+        extract:
+          metadata:
+            - k8s.pod.name
+            - k8s.pod.uid
+            - k8s.deployment.name
+            - k8s.namespace.name
+            - k8s.node.name
+            - k8s.pod.start_time
+          labels:
+            - key_regex: "^app.kubernetes.io/.*"
+              tag_name: "%s"
+            - key_regex: "app"
+              tag_name: "k8s.pod.label.app"
+            - key_regex: "component"
+              tag_name: "k8s.pod.label.component"
+
+    exporters:
+      prometheus: # Udostępnia endpoint /metrics dla Prometheus
+        endpoint: "0.0.0.0:8889"
+
+      loki: # Wysyła logi do Loki
+        endpoint: "http://loki.telemetry.svc.cluster.local:3100/loki/api/v1/push"
+        # Pamiętaj o dostosowaniu adresu URL i ewentualnie tenant_id/headers dla Twojej instancji Loki
+
+      otlphttp/tempo: # Wysyła ślady do Tempo
+        endpoint: "http://tempo.telemetry.svc.cluster.local:4318/v1/traces"
+        # Pamiętaj o dostosowaniu adresu URL dla Twojej instancji Tempo
+
+      logging: # Wypisuje dane na konsolę (przydatne do debugowania)
+        loglevel: info # Możesz zmienić na 'debug' dla bardziej szczegółowych logów
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, batch]
+          exporters: [otlphttp/tempo, logging] # Używa zdefiniowanych eksporterów
+
+        metrics:
+          receivers: [otlp, hostmetrics, prometheus/cadvisor]
+          processors: [memory_limiter, k8sattributes, batch]
+          exporters: [prometheus, logging]

@@ -1,0 +1,129 @@
+# otel-collector-daemonset.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-collector-agent # Nazwa dla Twojego DaemonSet
+  namespace: telemetry      # Przestrzeń nazw
+  labels:
+    app: opentelemetry
+    component: otel-collector-agent
+spec:
+  selector:
+    matchLabels:
+      app: opentelemetry
+      component: otel-collector-agent
+  template:
+    metadata:
+      labels:
+        app: opentelemetry
+        component: otel-collector-agent
+    spec:
+      # Upewnij się, że masz ServiceAccount z odpowiednimi uprawnieniami RBAC,
+      # zwłaszcza dla k8sattributes i hostmetrics.
+      # Wcześniej podawałem przykład RBAC, który można nazwać np. 'otel-collector-sa'.
+      serviceAccountName: otel-collector-sa # ZMIEŃ, jeśli używasz innej nazwy ServiceAccount
+
+      # Tolerations mogą być potrzebne, jeśli Twoje węzły mają tainty,
+      # np. dla węzłów master/control-plane.
+      # tolerations:
+      # - key: "node-role.kubernetes.io/master"
+      #   operator: "Exists"
+      #   effect: "NoSchedule"
+      # - key: "node-role.kubernetes.io/control-plane"
+      #   operator: "Exists"
+      #   effect: "NoSchedule"
+
+      # hostNetwork: false # Zazwyczaj false jest bezpieczniejsze. Ustaw na true tylko jeśli jest to absolutnie konieczne
+                        # dla specyficznego receivera i rozumiesz implikacje bezpieczeństwa.
+      # dnsPolicy: ClusterFirst # lub ClusterFirstWithHostNet jeśli hostNetwork: true
+
+      containers:
+      - name: otel-collector
+        image: otel/opentelemetry-collector-contrib:0.100.0 # Zawsze dobrze jest przypiąć konkretną wersję obrazu
+        # image: otel/opentelemetry-collector-contrib:latest # Lub użyj latest, jeśli wiesz co robisz
+        command:
+          - "/otelcol-contrib"
+          - "--config=/conf/collector.yaml"
+        env:
+          - name: KUBE_NODE_NAME # Niezbędne dla k8sattributes processor do identyfikacji węzła
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: spec.nodeName
+          # Możesz tu dodać inne zmienne środowiskowe, jeśli są potrzebne
+          # np. dla dynamicznej konfiguracji niektórych komponentów kolektora.
+          # - name: MY_POD_IP
+          #   valueFrom:
+          #     fieldRef:
+          #       fieldPath: status.podIP
+
+        ports:
+          - name: otlp-grpc # Dla OTLP/gRPC
+            containerPort: 4317
+            protocol: TCP
+          - name: otlp-http # Dla OTLP/HTTP
+            containerPort: 4318
+            protocol: TCP
+          - name: prom-metrics # Dla eksportera Prometheus (metryki przetwarzane)
+            containerPort: 8889
+            protocol: TCP
+          - name: coll-metrics # Dla wewnętrznych metryk kolektora
+            containerPort: 8888
+            protocol: TCP
+          # Dodaj inne porty, jeśli używasz innych receiverów (np. Jaeger, Zipkin, FluentForward)
+
+        resources: # Dostosuj zasoby do swoich potrzeb i możliwości węzłów
+          limits:
+            cpu: "500m"    # 0.5 CPU
+            memory: "1Gi"  # 1 GiB
+          requests:
+            cpu: "100m"    # 0.1 CPU
+            memory: "200Mi" # 200 MiB
+
+        volumeMounts:
+        - name: otel-collector-config-vol
+          mountPath: /conf # Katalog, gdzie zamontowany będzie collector.yaml
+        # Jeśli używasz odbiorników, które potrzebują dostępu do systemu plików hosta
+        # (np. filelog do czytania logów z /var/log/pods lub niektóre scrapers hostmetrics),
+        # będziesz musiał dodać odpowiednie volumeMounts i volumes typu hostPath.
+        # Przykład dla /var/log/pods:
+        # - name: varlogpods
+        #   mountPath: /var/log/pods
+        #   readOnly: true
+        # - name: varlibdockercontainers
+        #   mountPath: /var/lib/docker/containers
+        #   readOnly: true
+        # Przykład dla dostępu do /proc i /sys dla hostmetrics (ostrożnie z tym):
+        # - name: procfs
+        #   mountPath: /host/proc
+        #   readOnly: true
+        # - name: sysfs
+        #   mountPath: /host/sys
+        #   readOnly: true
+
+        # SecurityContext może być potrzebny dla niektórych zaawansowanych scraperów hostmetrics
+        # lub dostępu do hostPath. Używaj z rozwagą.
+        # securityContext:
+        #   privileged: false # Zazwyczaj false. Ustaw na true tylko jeśli absolutnie konieczne i wiesz co robisz.
+        #   # readOnlyRootFilesystem: true # Dobra praktyka, jeśli to możliwe
+
+      volumes:
+      - name: otel-collector-config-vol
+        configMap:
+          name: otel-collector-conf # Nazwa ConfigMap z konfiguracją kolektora
+          items:
+            - key: collector.yaml
+              path: collector.yaml
+      # Przykłady wolumenów hostPath (używaj ostrożnie i tylko jeśli potrzebne):
+      # - name: varlogpods
+      #   hostPath:
+      #     path: /var/log/pods
+      # - name: varlibdockercontainers
+      #   hostPath:
+      #     path: /var/lib/docker/containers
+      # - name: procfs
+      #   hostPath:
+      #     path: /proc
+      # - name: sysfs
+      #   hostPath:
+      #     path: /sys
