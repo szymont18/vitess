@@ -32,6 +32,36 @@ Architektura tej technologii wygląda następująco (obrazek wzięty z oficjalne
 
 ![Opis alternatywny](img/architecture.png)
 
+### 3. Opis koncepcji
+
+W ramach projektu opartego o system Vitess, zaprojektowano i przeanalizowano dwa scenariusze demonstrujące mechanizmy działania i odporności rozproszonego systemu bazodanowego. Projekt skupia się na dwóch modelach shardingu: horyzontalnym oraz wertykalnym, z wykorzystaniem replikacji i komponentów systemu Vitess, takich jak VTGate i VTTablet.
+
+#### Scenariusz 1 – Sharding horyzontalny (horizontal sharding)
+
+Sharding horyzontalny polega na podziale danych tej samej tabeli pomiędzy różne instancje baz danych. Każdy shard przechowuje ten sam schemat, ale inny zakres danych (np. według customer_id).
+
+Przebieg:
+- Użytkownik wykonuje zapytanie, np.
+`SELECT * FROM customers WHERE customer_id = 1350`.
+- Komponent VTGate odbiera zapytanie i kieruje je do odpowiedniego sharda na podstawie wartości klucza.
+- VTGate przekazuje zapytanie do właściwego VTTablet, obsługującego shard zawierający wymagane dane.
+- VTTablet wykonuje zapytanie na instancji MySQL i odbiera wynik.
+- VTGate (jeśli potrzeba) agreguje dane i zwraca wynik użytkownikowi.
+
+#### Scenariusz 2 – Sharding wertykalny (vertical sharding)
+
+Sharding wertykalny oznacza logiczne rozdzielenie schematu – różne tabele są rozlokowane na różnych instancjach baz danych. Każda z tych instancji może posiadać swoje repliki, co umożliwia rozdzielenie ruchu odczytu i zwiększenie wydajności.
+
+Przebieg:
+- Użytkownik wykonuje zapytanie, np.
+`SELECT * FROM customers`.
+- VTGate identyfikuje, że tabela customers znajduje się w instancji bazy A.
+- Zapytanie trafia do odpowiedniego VTTablet.
+- Dla zapytań typu SELECT, VTGate może użyć jednej z replik zamiast instancji głównej.
+- Replika MySQL zwraca dane.
+- VTGate przekazuje wynik użytkownikowi.
+- W przypadku zapytań obejmujących wiele tabel (np. JOIN), VTGate zbiera dane z różnych shardów i łączy je przed zwróceniem.
+
 ### 4 Architektura rozwiązania
 W projekcie zaprezentowano uruchomienie klastra Vitess w środowisku Kubernetes przy
 użyciu operatora Vitess.
