@@ -34,33 +34,19 @@ Architektura tej technologii wygląda następująco (obrazek wzięty z oficjalne
 
 ### 3. Opis koncepcji
 
-W ramach projektu opartego o system Vitess, zaprojektowano i przeanalizowano dwa scenariusze demonstrujące mechanizmy działania i odporności rozproszonego systemu bazodanowego. Projekt skupia się na dwóch modelach shardingu: horyzontalnym oraz wertykalnym, z wykorzystaniem replikacji i komponentów systemu Vitess, takich jak VTGate i VTTablet.
+W ramach początkowej wizji projektu zaplanowano oraz zaprojektowano 2 scenariusze, koncentrujące się na dwóch modelach shardingu: horyzontalnym oraz wertykalnym, z wykorzystaniem replikacji i komponentów systemu Vitess, takich jak VTGate i VTTablet.
 
-#### Scenariusz 1 – Sharding horyzontalny (horizontal sharding)
+Ze względu na potrzeby sprzętowe przewyzszające dostępne zasody (zarówno prywatne w postaci pamięci własnych maszyn jak i wirtualne w postaci chmury AWS) konieczna była rezygnacja z zaplanowanych scenariuszy skalowania i decyzja o zmianie scenariusza:
 
-Sharding horyzontalny polega na podziale danych tej samej tabeli pomiędzy różne instancje baz danych. Każdy shard przechowuje ten sam schemat, ale inny zakres danych (np. według customer_id).
+#### Scenariusz testu
 
-Przebieg:
-- Użytkownik wykonuje zapytanie, np.
-`SELECT * FROM customers WHERE customer_id = 1350`.
-- Komponent VTGate odbiera zapytanie i kieruje je do odpowiedniego sharda na podstawie wartości klucza.
-- VTGate przekazuje zapytanie do właściwego VTTablet, obsługującego shard zawierający wymagane dane.
-- VTTablet wykonuje zapytanie na instancji MySQL i odbiera wynik.
-- VTGate (jeśli potrzeba) agreguje dane i zwraca wynik użytkownikowi.
-
-#### Scenariusz 2 – Sharding wertykalny (vertical sharding)
-
-Sharding wertykalny oznacza logiczne rozdzielenie schematu – różne tabele są rozlokowane na różnych instancjach baz danych. Każda z tych instancji może posiadać swoje repliki, co umożliwia rozdzielenie ruchu odczytu i zwiększenie wydajności.
+W zaprezentowanym scenariuszu skupiliśmy się na pokazaniu działania systemu Vitess przez wywoływanie queries do bazy danych oraz obserwacji zachowania systemu z pomocą narzędzie OTel, Prometeus i Grafana.
 
 Przebieg:
-- Użytkownik wykonuje zapytanie, np.
-`SELECT * FROM customers`.
-- VTGate identyfikuje, że tabela customers znajduje się w instancji bazy A.
-- Zapytanie trafia do odpowiedniego VTTablet.
-- Dla zapytań typu SELECT, VTGate może użyć jednej z replik zamiast instancji głównej.
-- Replika MySQL zwraca dane.
-- VTGate przekazuje wynik użytkownikowi.
-- W przypadku zapytań obejmujących wiele tabel (np. JOIN), VTGate zbiera dane z różnych shardów i łączy je przed zwróceniem.
+- Uzytkownik posiada dostęp do bazy danych właściwie przygotowanej do działania według kroków w punktach 6-7
+- Uzytkownik wykonuje wielokrotnie zapytania do bazy danych obciązając tym samym system, np. `SELECT * FROM customer`, `SELECT * FROM product` czy `SELECT * FROM corder` - konieczne jest przeprowadzenie zapytań w bardzo niewielkim odstępie czasowym tak, zeby odpowiednio dociązyć system
+- Obserwujemy na Grafanie zwiększone wykorzystanie CPU w momencie wywołania zapytań
+
 
 ### 4 Architektura rozwiązania
 W projekcie zaprezentowano uruchomienie klastra Vitess w środowisku Kubernetes przy
@@ -175,9 +161,5 @@ Poniżej prezentujemy wykresy i dane zebrane z monitoringu, które ilustrują r�
 ![Alternatiwny](img/metric.png)
 ![Alternatiwny](img/withoutStress.png)
 ![Alternatiwny](img/withStress.png)
-
-
-
-
 
 
