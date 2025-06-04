@@ -1,4 +1,4 @@
-apiVersion: planetscale.com/v2
+apiVersion: planetscale.com/v2alpha1
 kind: VitessCluster
 metadata:
   name: initialcluster
@@ -21,24 +21,40 @@ spec:
     mysqld:
       mysql80Compatible: vitess/lite:latest
     mysqldExporter: prom/mysqld-exporter:v0.14.0
+  vtctld:
+    extraFlags:
+      tracer: opentelemetry
+      opentelemetry-collector-address: otel-collector.observability.svc.cluster.local:4317
+
+  vtgate:
+    extraFlags:
+      tracer: opentelemetry
+      opentelemetry-collector-address: otel-collector.observability.svc.cluster.local:4317
+
+  # Optional: enable for vttablet as well (helps diagnose queries at shard level)
+  vttablet:
+    extraFlags:
+      tracer: opentelemetry
+      opentelemetry-collector-address: otel-collector.observability.svc.cluster.local:4317
+
   cells:
-  - name: zone1
-    gateway:
-      authentication:
-        static:
-          secret:
-            name: example-cluster-config
-            key: users.json
-      replicas: 1
-      resources:
-        requests:
-          cpu: 100m
-          memory: 256Mi
-        limits:
-          memory: 256Mi
+    - name: zone1
+      gateway:
+        authentication:
+          static:
+            secret:
+              name: example-cluster-config
+              key: users.json
+        replicas: 1
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 256Mi
   vitessDashboard:
     cells:
-    - zone1
+      - zone1
     extraFlags:
       security_policy: read-only
     replicas: 1
@@ -72,50 +88,50 @@ spec:
         memory: 128Mi
 
   keyspaces:
-  - name: pokemondB
-    durabilityPolicy: none
-    turndownPolicy: Immediate
-    vitessOrchestrator:
-      resources:
-        limits:
-          memory: 128Mi
-        requests:
-          cpu: 100m
-          memory: 128Mi
-      extraFlags:
-        instance-poll-time: 1s
-    partitionings:
-    - equal:
-        parts: 1
-        shardTemplate:
-          databaseInitScriptSecret:
-            name: example-cluster-config
-            key: init_db.sql
-          tabletPools:
-          - cell: zone1
-            type: replica
-            replicas: 2
-            vttablet:
-              extraFlags:
-                db_charset: utf8mb4
-              resources:
-                limits:
-                  memory: 256Mi
-                requests:
-                  cpu: 100m
-                  memory: 256Mi
-            mysqld:
-              resources:
-                limits:
-                  memory: 512Mi
-                requests:
-                  cpu: 100m
-                  memory: 256Mi
-            dataVolumeClaimTemplate:
-              accessModes: ["ReadWriteOnce"]
-              resources:
-                requests:
-                  storage: 10Gi
+    - name: pokemondB
+      durabilityPolicy: none
+      turndownPolicy: Immediate
+      vitessOrchestrator:
+        resources:
+          limits:
+            memory: 128Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        extraFlags:
+          instance-poll-time: 1s
+      partitionings:
+        - equal:
+            parts: 1
+            shardTemplate:
+              databaseInitScriptSecret:
+                name: example-cluster-config
+                key: init_db.sql
+              tabletPools:
+                - cell: zone1
+                  type: replica
+                  replicas: 2
+                  vttablet:
+                    extraFlags:
+                      db_charset: utf8mb4
+                    resources:
+                      limits:
+                        memory: 256Mi
+                      requests:
+                        cpu: 100m
+                        memory: 256Mi
+                  mysqld:
+                    resources:
+                      limits:
+                        memory: 1024Mi
+                      requests:
+                        cpu: 100m
+                        memory: 256Mi
+                  dataVolumeClaimTemplate:
+                    accessModes: ["ReadWriteOnce"]
+                    resources:
+                      requests:
+                        storage: 10Gi
   updateStrategy:
     type: Immediate
 ---
