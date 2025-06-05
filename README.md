@@ -193,6 +193,18 @@ Równiez w przypadku samego Vitessa, chatGPT zdarzał się być przydatny:
 
 Tak więc podsumowując wykorzystanie narzędzi AI, są to bardzo wygodne rozwiązania, jednak dopiero wtedy, kiedy jest się obeznanym w temacie i intuicyjnie wie się, kiedy odpowiedzi mają szansę być poprawne, a kiedy nie. Dopóki nie jest się dobrze zaznajomionym z technologią, najlepszym wyborem jest skorzystanie z docsów.
 
-### 10. Bibliografia
-- Docsy Vitess: https://vitess.io/docs
-- Docsy OpenTelemetry: https://opentelemetry.io/docs
+### 10. Wnioski
+W przeprowadzonym eksperymencie, którego celem było uruchomienie środowiska Vitess oraz monitorowanie jego działania za pomocą OpenTelemetry, Prometheusa i Grafany, udało się uzyskać szczegółowe informacje na temat zużycia zasobów przez poszczególne komponenty klastra. Analiza metryk pokazała, że największe obciążenie procesora podczas wykonywania zapytań SQL przypada na komponenty vtablet oraz vtgate. vtablet odpowiada za bezpośredni kontakt z bazą danych MySQL, a vtgate pełni funkcję bramy agregującej zapytania i rozdzielającej je do odpowiednich shardów – ich intensywna praca w czasie przetwarzania zapytań jest więc naturalna, ale też stanowi kluczowy punkt obserwacyjny pod kątem optymalizacji.
+
+Z eksperymentu wynikają również inne istotne wnioski – Vitess okazuje się być bardzo zasobożerny, szczególnie jeśli chodzi o zapotrzebowanie na pamięć RAM. Ta obserwacja nie wynika bezpośrednio z wykresów metryk, lecz z praktycznych problemów napotkanych podczas prób uruchomienia klastra Vitess na sprzęcie o ograniczonych zasobach. Próby postawienia środowiska na maszynach z niewielką ilością dostępnej pamięci często kończyły się niepowodzeniem lub niestabilnym działaniem usług. Co więcej, zauważalny jest niedobór przykładów użycia Vitessa w internecie, co utrudnia jego wdrażanie i rozwiązywanie problemów.
+
+Prometheus i Grafana wyróżniają się bardzo dobrą dokumentacją oraz szeroką kompatybilnością z różnymi systemami i usługami. Ich elastyczność oraz bogata kolekcja gotowych dashboardów sprawiają, że integracja z Vitess – choć wymaga pewnej konfiguracji – przebiega sprawnie i pozwala na szybkie uzyskanie wartościowych danych
+
+### 11. Bibliografia
+- Vitess: https://vitess.io/docs
+- OpenTelemetry: https://opentelemetry.io/docs
+- Grafana: https://grafana.com/
+- Kubernetess: https://kubernetes.io/
+- Mysql: https://www.mysql.com/
+- Minikube: https://minikube.sigs.k8s.io/docs/start/
+- Docker: https://www.docker.com/
