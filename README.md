@@ -1,5 +1,11 @@
 # Vitess Demo
 
+### Autorzy:
+- Szymon Twardosz
+- Dominik Pilipczuk
+- Krzysztof Tranquilo Dziechciarz
+- Wiktor Gut
+
 ### 1. Wprowadzenie
 Celem projektu jest przedstawienie studium przypadku systemu Vitess – open-sourcowej
 platformy służącej do skalowania baz danych MySQL w środowiskach chmurowych i rozproszonych. Vitess został stworzony przez YouTube jako odpowiedź na rosnące potrzeby skalowalności i dostępności danych w dużych systemach produkcyjnych, gdzie tradycyjne podejście
